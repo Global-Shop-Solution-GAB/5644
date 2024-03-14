@@ -1,0 +1,173 @@
+Program.Sub.ScreenSU.Start
+Gui.fmPLLoc..Create
+Gui.fmPLLoc..Size(3645,1635)
+Gui.fmPLLoc..MinX(3645)
+Gui.fmPLLoc..MinY(1635)
+Gui.fmPLLoc..Position(0,0)
+Gui.fmPLLoc..BackColor(-2147483633)
+Gui.fmPLLoc..MousePointer(0)
+Gui.fmPLLoc..Event(UnLoad,fmPLLoc_UnLoad)
+Gui.fmPLLoc..Caption("PL / Loc MX")
+Gui.fmPLLoc..AlwaysOnTop(True)
+Gui.fmPLLoc..MaxButton(False)
+Gui.fmPLLoc..MinButton(False)
+Gui.fmPLLoc..Sizeable(False)
+Gui.fmPLLoc.txtLoc.Create(TextBox,"",True,1215,300,0,2160,480,True,0,"Arial",8,-2147483643,1)
+Gui.fmPLLoc.txtLoc.TabStop(True)
+Gui.fmPLLoc.txtLoc.TabIndex(3)
+Gui.fmPLLoc.txtLoc.MaxLength(2)
+Gui.fmPLLoc.lblLoc.Create(Label,"Location",True,1155,255,0,2160,210,True,0,"Arial",8,-2147483633,0)
+Gui.fmPLLoc.lblLoc.FontStyle(True,False,False,False,False)
+Gui.fmPLLoc.lblPL.Create(Label,"Product Line",True,1230,255,0,90,210,True,0,"Arial",8,-2147483633,0)
+Gui.fmPLLoc.lblPL.FontStyle(True,False,False,False,False)
+Gui.fmPLLoc.txtPL.Create(TextBox,"",True,1215,300,0,90,480,True,0,"Arial",8,-2147483643,1)
+Gui.fmPLLoc.txtPL.TabStop(True)
+Gui.fmPLLoc.txtPL.TabIndex(1)
+Gui.fmPLLoc.txtPL.MaxLength(2)
+Gui.fmPLLoc.cmdSV.Create(Button)
+Gui.fmPLLoc.cmdSV.Size(825,375)
+Gui.fmPLLoc.cmdSV.Position(1320,840)
+Gui.fmPLLoc.cmdSV.Caption("Save")
+Gui.fmPLLoc.cmdSV.Event(Click,cmdSV_Click)
+Gui.fmPLLoc.cmdSV.TabStop(True)
+Gui.fmPLLoc.cmdSV.TabIndex(5)
+Gui.fmPLLoc.cmdSV.BackColor(12648384)
+Gui.fmPLLoc.cmdSV.FontStyle(True,False,False,False,False)
+Gui.fmPLLoc.cmdClr.Create(Button)
+Gui.fmPLLoc.cmdClr.Size(1230,375)
+Gui.fmPLLoc.cmdClr.Position(90,840)
+Gui.fmPLLoc.cmdClr.Caption("Clr Scrn")
+Gui.fmPLLoc.cmdClr.Event(Click,cmdClr_Click)
+Gui.fmPLLoc.cmdClr.TabStop(True)
+Gui.fmPLLoc.cmdClr.TabIndex(4)
+Gui.fmPLLoc.cmdClr.BackColor(16777215)
+Gui.fmPLLoc.cmdClr.FontStyle(True,False,False,False,False)
+Gui.fmPLLoc.cmdPlBrw.Create(Button)
+Gui.fmPLLoc.cmdPlBrw.Size(825,330)
+Gui.fmPLLoc.cmdPlBrw.Position(1320,465)
+Gui.fmPLLoc.cmdPlBrw.Caption("^")
+Gui.fmPLLoc.cmdPlBrw.Event(Click,cmdPlBrw_Click)
+Gui.fmPLLoc.cmdPlBrw.TabStop(True)
+Gui.fmPLLoc.cmdPlBrw.TabIndex(2)
+Gui.fmPLLoc.cmdDel.Create(Button)
+Gui.fmPLLoc.cmdDel.Size(1230,375)
+Gui.fmPLLoc.cmdDel.Position(2145,840)
+Gui.fmPLLoc.cmdDel.Caption("Delete")
+Gui.fmPLLoc.cmdDel.BackColor(12632319)
+Gui.fmPLLoc.cmdDel.Event(Click,cmdDel_Click)
+Gui.fmPLLoc.cmdDel.FontStyle(True,False,False,False,False)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'TJS, Aug 2019
+'Customer: Nyle Systems, LLC
+'Customer requires a means of autofilling the Product Line field on Sales Order Entry Lines from the customer location.
+'This program will allow maintenance of the specific product line to location cross-references.
+'Pervasive table GCG_5644_PL_LOC created to maintain these cross-references, with PL set as primary key.
+'Assocated program: GCG_5644_PL_LOC.g2u
+Gui.fmPLLoc..Show
+Program.Sub.Main.End
+
+Program.Sub.cmdSV_Click.Start
+F.Intrinsic.Control.Try
+V.Local.sSQL.Declare
+V.Local.sError.Declare
+V.Local.sPL.Declare
+V.Local.sLoc.Declare
+V.Local.iRet.Declare
+'Set the inputs to uppercase
+V.Local.sPL.Set(V.Screen.fmPLLoc!txtPL.Text.UCASE)
+V.Local.sLoc.Set(V.Screen.fmPLLoc!txtLoc.Text.UCASE)
+'Verify the input is a valid PL
+F.ODBC.Connection!conts.OpenCompanyConnection
+F.Intrinsic.String.Build("select * from V_PRODUCT_LINE where PRODUCT_LINE = '{0}'",V.Local.sPL,V.Local.sSQL)
+F.ODBC.Connection!conts.ExecuteAndReturn(V.Local.sSQL,V.Local.sSQL)
+
+'If valid, insert new or changed record into custom table
+F.Intrinsic.Control.If(V.Local.sSQL,<>,"","AND", V.Local.sLoc.Trim,<>,"")
+	F.Intrinsic.String.Build("delete GCG_5644_PL_LOC where PRODUCT_LINE = '{0}'",V.Local.sPL.PSQLFriendly,V.Local.sSQL)
+	F.ODBC.Connection!conts.Execute(V.Local.sSQL)
+	F.Intrinsic.String.Build("insert into GCG_5644_PL_LOC (PRODUCT_LINE,LOCATION) values ('{0}','{1}')",V.Local.sPL.PSQLFriendly,V.Local.sLoc.PSQLFriendly,V.Local.sSQL)
+	F.ODBC.Connection!conts.Execute(V.Local.sSQL)
+	Gui.fmPLLoc.txtLoc.Text("")
+	Gui.fmPLLoc.txtPL.Text("")
+F.Intrinsic.Control.Else
+	F.Intrinsic.UI.Msgbox("Please choose a valid Product Line and Location.","Invalid Entry.",V.Local.iRet)
+F.Intrinsic.Control.EndIf
+F.ODBC.Connection!conts.Close
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("({5}-{6})-Project: {4} Sub: {1} Error: {2}, {3}{0}", V.Ambient.NewLine, V.Ambient.CurrentSubroutine, V.Ambient.ErrorNumber, V.Ambient.ErrorDescription,V.Caller.ScriptFile,V.Ambient.Date, V.Ambient.Time,V.Local.sError)
+	F.Intrinsic.Control.CallSub(Error, "Arg0", V.Local.sError)
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdSV_Click.End
+
+Program.Sub.cmdClr_Click.Start
+V.Local.sError.Declare
+F.Intrinsic.Control.Try
+'Clear the screen
+Gui.fmPLLoc.txtLoc.Text("")
+Gui.fmPLLoc.txtPL.Text("")
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("({5}-{6})-Project: {4} Sub: {1} Error: {2}, {3}{0}", V.Ambient.NewLine, V.Ambient.CurrentSubroutine, V.Ambient.ErrorNumber, V.Ambient.ErrorDescription,V.Caller.ScriptFile,V.Ambient.Date, V.Ambient.Time,V.Local.sError)
+	F.Intrinsic.Control.CallSub(Error, "Arg0", V.Local.sError)
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdClr_Click.End
+
+Program.Sub.cmdPlBrw_Click.Start
+F.Intrinsic.Control.Try
+V.Local.sRet.Declare
+V.Local.sError.Declare
+'Custom browser to view existing entries in custom table
+Gui.fmPLLoc..AlwaysOnTop(False)
+F.ODBC.Connection!conts.OpenCompanyConnection
+F.Intrinsic.UI.Browser("Please select a Product Line","conts","select * from GCG_5644_PL_LOC order by PRODUCT_LINE","PRODUCT_LINE*!*LOCATION","10*!*10",V.Local.sRet)
+F.Intrinsic.Control.If(V.Local.sRet,<>,"***CANCEL***")
+	F.Intrinsic.String.Split(V.Local.sRet,"*!*",V.Local.sRet)
+	Gui.fmPLLoc.txtPL.Text(V.Local.sRet(0))
+	Gui.fmPLLoc.txtLoc.Text(V.Local.sRet(1))
+F.Intrinsic.Control.EndIf
+F.ODBC.Connection!conts.Close
+Gui.fmPLLoc..AlwaysOnTop(True)
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("({5}-{6})-Project: {4} Sub: {1} Error: {2}, {3}{0}", V.Ambient.NewLine, V.Ambient.CurrentSubroutine, V.Ambient.ErrorNumber, V.Ambient.ErrorDescription,V.Caller.ScriptFile,V.Ambient.Date, V.Ambient.Time,V.Local.sError)
+	F.Intrinsic.Control.CallSub(Error, "Arg0", V.Local.sError)
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdPlBrw_Click.End
+
+Program.Sub.cmdDel_Click.Start
+F.Intrinsic.Control.Try
+V.Local.sSQL.Declare
+V.Local.sError.Declare
+V.Local.sPL.Declare
+V.Local.sLoc.Declare
+
+'Set the inputs to uppercase
+V.Local.sPL.Set(V.Screen.fmPLLoc!txtPL.Text.UCASE)
+V.Local.sLoc.Set(V.Screen.fmPLLoc!txtLoc.Text.UCASE)
+
+'Delete the existing entry
+F.Intrinsic.String.Build("delete GCG_5644_PL_LOC where PRODUCT_LINE = '{0}' and LOCATION = '{1}'",V.Local.sPL.PSQLFriendly,V.Local.sLoc.PSQLFriendly,V.Local.sSQL)
+F.ODBC.Connection!conts.OpenCompanyConnection
+F.ODBC.Connection!conts.Execute(V.Local.sSQL)
+Gui.fmPLLoc.txtLoc.Text("")
+Gui.fmPLLoc.txtPL.Text("")
+F.ODBC.Connection!conts.Close
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("({5}-{6})-Project: {4} Sub: {1} Error: {2}, {3}{0}", V.Ambient.NewLine, V.Ambient.CurrentSubroutine, V.Ambient.ErrorNumber, V.Ambient.ErrorDescription,V.Caller.ScriptFile,V.Ambient.Date, V.Ambient.Time,V.Local.sError)
+	F.Intrinsic.Control.CallSub(Error, "Arg0", V.Local.sError)
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdDel_Click.End
+
+Program.Sub.Error.Start
+V.Local.iRet.Declare
+F.Intrinsic.UI.Msgbox(V.Args.Arg0,"Error",V.Local.iRet)
+F.Intrinsic.Control.End
+Program.Sub.Error.End
+
+Program.Sub.fmPLLoc_UnLoad.Start
+F.Intrinsic.Control.End
+Program.Sub.fmPLLoc_UnLoad.End

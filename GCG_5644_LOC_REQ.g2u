@@ -1,0 +1,34 @@
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'TJS, Aug 2019
+'Customer: Nyle Systems, LLC
+'Addition to project 5644.  Customer wanted a means of forcing a location to be set when 
+'adding new customers or updating existing customers.
+'This program determines if the location is empty and prevents saving the customer until filled.
+'Assocated program: GCG_5644_PL_LOC.g2u
+'Hook 14384, New Customer Pre-Save button
+'Passed variables:  000076 (Location)
+
+'TJS, Updated Sept 2019 to autocheck "Shipping Hold", "Set Shipping Hold", and "Allow Shipping Override"
+'on new and existing customers
+'Passed variables:  000095 SHP-HLD
+'Passed variables:  000096 SET-SHP-HLD
+'Passed variables:  000097 SHP-HLD-OVRD
+v.Local.iRet.Declare
+
+f.Intrinsic.Control.If(v.Passed.000076.Trim,=,"")
+	v.Passed.777777.Set(True)
+	f.Intrinsic.UI.Msgbox("Please set a location prior to saving","Location must be set",v.Local.iRet)
+	F.Intrinsic.Control.End
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.UI.Msgbox("Autoset Shipping Hold?", "", 4,v.Local.iRet)
+f.Intrinsic.Control.If(v.Local.iRet,=,6)
+	v.Passed.000095.Set("Y")
+	v.Passed.000097.Set("Y")
+	F.Intrinsic.Control.End
+f.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End

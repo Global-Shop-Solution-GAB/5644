@@ -1,0 +1,112 @@
+﻿Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.Try
+'TJS, Aug 2019
+'Customer: Nyle Systems, LLC
+'Customer requires a means of autofilling the Product Line field on Sales Order Entry Lines from the customer location established on the SO Header.
+'This program looks for specific locations when a part between 1 and 29999999 is populuated and update the PL accordingly.
+'Assocated program: GCG_5644_PL_LOC_MX.g2u
+'Hook 11560, SO Header Populate - used to establish customer location regardless of inventory.  
+'Hook 12010, Sales Order Line Populate 
+'Hook 12440, Short form populate
+'Hook 12511, Short Form post-save
+'Passed variables:  Regular form - 000052 (Part number), 000054 (Location) or 000065 (Location), 000013 (Product Line)
+'Short form - 000074 (Location), 000005 (Order No), 000013 (Record No)
+
+'Establish customer location from header for duration of thread
+F.Intrinsic.Control.SelectCase(V.Caller.Hook)
+	F.Intrinsic.Control.Case(11560)
+		v.Passed.Global.Set(v.Passed.000065)
+		F.Intrinsic.Control.CallSub(MainFrm)
+	F.Intrinsic.Control.Case(11565)
+		v.Passed.Global.Set(v.Passed.000065)
+	F.Intrinsic.Control.Case(12010)
+		v.Passed.Global.Set(v.Passed.000054)
+		F.Intrinsic.Control.CallSub(MainFrm)
+	F.Intrinsic.Control.Case(12045)
+		F.Intrinsic.Control.CallSub(MainFrm)
+	F.Intrinsic.Control.Case(12455)
+		v.Passed.Global.Set(v.Passed.000074)
+	F.Intrinsic.Control.Case(12511)
+		F.Intrinsic.Control.CallSub(ShrtFrm)
+F.Intrinsic.Control.EndSelect
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("({5}-{6})-Project: {4} Sub: {1} Error: {2}, {3}{0}", V.Ambient.NewLine, V.Ambient.CurrentSubroutine, V.Ambient.ErrorNumber, V.Ambient.ErrorDescription,V.Caller.ScriptFile,V.Ambient.Date, V.Ambient.Time,V.Local.sError)
+	F.Intrinsic.Control.CallSub(Error, "Arg0", V.Local.sError)
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.MainFrm.Start
+F.Intrinsic.Control.Try
+V.Local.iRet.Declare
+V.Local.sSql.Declare
+V.Local.sError.Declare
+
+'Verify part number is within range specified by the customer
+F.Intrinsic.Control.If(V.Passed.000052,>=,1,"AND",V.Passed.000052,<=,29999999)
+	F.ODBC.Connection!conts.OpenCompanyConnection
+	F.Intrinsic.String.Build("select PRODUCT_LINE from GCG_5644_PL_LOC where LOCATION = '{0}'",v.Passed.Global,V.Local.sSql)
+	F.ODBC.Connection!conts.ExecuteAndReturn(V.Local.sSql,V.Local.sSql)
+	F.ODBC.Connection!conts.close
+'If there is a location reference established in the custom table, then populate the PL field with the appropriate PL
+	F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF,<>,True)
+		V.Passed.000013.Set(V.Local.sSql.Trim)
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("({5}-{6})-Project: {4} Sub: {1} Error: {2}, {3}{0}", V.Ambient.NewLine, V.Ambient.CurrentSubroutine, V.Ambient.ErrorNumber, V.Ambient.ErrorDescription,V.Caller.ScriptFile,V.Ambient.Date, V.Ambient.Time,V.Local.sError)
+	F.Intrinsic.Control.CallSub(Error, "Arg0", V.Local.sError)
+F.Intrinsic.Control.EndTry
+Program.Sub.MainFrm.End
+
+Program.Sub.ShrtFrm.Start
+V.Local.iRet.Declare
+V.Local.sSql.Declare
+V.Local.sError.Declare
+V.Local.sPL.Declare
+V.Local.sGLAcct.Declare
+V.Local.sOrdNum.Declare
+V.Local.sLine.Declare
+
+F.Intrinsic.String.LPad(V.Passed.000005,0,7,V.Local.sOrdNum)
+F.Intrinsic.String.LPad(V.Passed.000013,0,3,V.Local.sLine)
+F.Intrinsic.String.RPad(V.Local.sLine,0,4,V.Local.sLine)
+
+'Verify part number is within range specified by the customer
+F.Intrinsic.Control.If(V.Passed.000071,>=,1,"AND",V.Passed.000071,<=,29999999)
+	F.ODBC.Connection!conts.OpenCompanyConnection
+	F.Intrinsic.String.Build("select PRODUCT_LINE from GCG_5644_PL_LOC where LOCATION = '{0}'",v.Passed.Global,V.Local.sSql)
+	F.ODBC.Connection!conts.ExecuteAndReturn(V.Local.sSql,V.Local.sPL)
+'If there is a location reference established in the custom table, then update the PL and GL Account in ORDER_LINES
+	F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF,<>,True)
+		F.Intrinsic.String.Build("Select SALES_ACCOUNT from V_PRODUCT_LINE where PRODUCT_LINE = '{0}'",V.Local.sPL, V.Local.sSQL)
+		F.ODBC.Connection!conts.ExecuteAndReturn(V.Local.sSql,V.Local.sGLAcct)
+			F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF,<>,True)
+				F.Intrinsic.String.Build("update ORDER_LINES set PRODUCT_LINE = '{0}',GL_ACCOUNT = '{1}' where ORDER_NO = '{2}' and RECORD_NO = '{3}'",V.Local.sPL.Trim,V.Local.sGLAcct.Trim,V.Local.sOrdNum.Trim,V.Local.sLine.Trim,V.Local.sSql)
+				F.ODBC.Connection!conts.Execute(V.Local.sSql)
+			F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+F.ODBC.Connection!conts.close
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("({5}-{6})-Project: {4} Sub: {1} Error: {2}, {3}{0}", V.Ambient.NewLine, V.Ambient.CurrentSubroutine, V.Ambient.ErrorNumber, V.Ambient.ErrorDescription,V.Caller.ScriptFile,V.Ambient.Date, V.Ambient.Time,V.Local.sError)
+	F.Intrinsic.Control.CallSub(Error, "Arg0", V.Local.sError)
+F.Intrinsic.Control.EndTry
+Program.Sub.ShrtFrm.End
+
+Program.Sub.Error.Start
+V.Local.iRet.Declare
+F.Intrinsic.UI.Msgbox(V.Args.Arg0,"Error",V.Local.iRet)
+F.Intrinsic.Control.End
+Program.Sub.Error.End
+
+Program.Sub.Comments.Start
+${$5$}$2.0.0.0$}$2
+${$6$}$triley$}$20230713075001824$}$iK6nerqp9nur1h1iSBfRKBBz1ENCgYv6t82gveU0GUKwxuOYw0TPyvpCUcghxCMDwCwy9ujEmSQ=
+Program.Sub.Comments.End
